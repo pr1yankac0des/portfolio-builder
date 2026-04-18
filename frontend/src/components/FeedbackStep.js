@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import './FeedbackStep.css';
 
+const API = process.env.REACT_APP_API_URL || '';
+
 const SCORE_META = {
   readability: { label: 'Readability', color: '#534AB7', desc: 'How clear and easy to read your content is' },
   impact:      { label: 'Impact',      color: '#0F6E56', desc: 'How achievement-focused and results-driven your bullets are' },
@@ -23,7 +25,7 @@ export default function FeedbackStep({ data, feedback, setFeedback, onBack, onNe
   const fetchFeedback = async () => {
     setLoading(true); setError('');
     try {
-      const res = await axios.post('/api/portfolio/feedback', { portfolioData: data });
+      const res = await axios.post(`${API}/api/portfolio/feedback`, { portfolioData: data });
       setFeedback(res.data.data);
       setLoading(false);
       setTimeout(() => setAnimated(true), 100);
@@ -37,7 +39,7 @@ export default function FeedbackStep({ data, feedback, setFeedback, onBack, onNe
     <div>
       <div className="card">
         <h2 className="card-title">AI draft feedback</h2>
-        <p className="card-sub">Claude has reviewed your portfolio for readability, impact, and completeness.</p>
+        <p className="card-sub">Your portfolio has been reviewed for readability, impact, and completeness.</p>
 
         {loading && (
           <div className="fb-loading">
@@ -66,13 +68,7 @@ export default function FeedbackStep({ data, feedback, setFeedback, onBack, onNe
                     <div className="score-label">{meta.label}</div>
                     <div className="score-number" style={{ color: meta.color }}>{Math.round(val)}</div>
                     <div className="score-bar-wrap">
-                      <div
-                        className="score-bar-fill"
-                        style={{
-                          width: animated ? val + '%' : '0%',
-                          background: meta.color
-                        }}
-                      />
+                      <div className="score-bar-fill" style={{ width: animated ? val + '%' : '0%', background: meta.color }} />
                     </div>
                     <div className="score-desc">{meta.desc}</div>
                   </div>

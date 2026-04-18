@@ -3,8 +3,10 @@ import { useDropzone } from 'react-dropzone';
 import axios from 'axios';
 import './UploadStep.css';
 
+const API = process.env.REACT_APP_API_URL || '';
+
 export default function UploadStep({ onParsed }) {
-  const [mode, setMode] = useState('file'); // 'file' | 'text'
+  const [mode, setMode] = useState('file');
   const [text, setText] = useState('');
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -43,7 +45,7 @@ export default function UploadStep({ onParsed }) {
       const form = new FormData();
       form.append('resume', file);
       simulate('Extracting text from document...', 45);
-      const res = await axios.post('/api/resume/upload', form, {
+      const res = await axios.post(`${API}/api/resume/upload`, form, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       simulate('AI is parsing and enriching your resume...', 75);
@@ -61,7 +63,7 @@ export default function UploadStep({ onParsed }) {
     setError(''); setLoading(true);
     try {
       simulate('Sending to AI parser...', 30);
-      const res = await axios.post('/api/resume/parse-text', { text });
+      const res = await axios.post(`${API}/api/resume/parse-text`, { text });
       simulate('Enriching bullets with action verbs and metrics...', 70);
       await new Promise(r => setTimeout(r, 300));
       simulate('Done!', 100);
@@ -104,9 +106,7 @@ export default function UploadStep({ onParsed }) {
                 </div>
               ) : (
                 <div className="drop-prompt">
-                  <div className="drop-icon">
-                    <UploadIcon />
-                  </div>
+                  <div className="drop-icon"><UploadIcon /></div>
                   <p className="drop-text">{isDragActive ? 'Drop your resume here' : 'Drag & drop your resume here'}</p>
                   <p className="drop-sub">or click to browse</p>
                   <div className="drop-types">PDF · DOCX · DOC · TXT &nbsp;·&nbsp; max 10 MB</div>
