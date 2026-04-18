@@ -1,0 +1,78 @@
+.mode-tabs {
+  display: flex;
+  gap: 0;
+  margin-bottom: 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  width: fit-content;
+}
+.mode-tab {
+  padding: 8px 20px;
+  font-size: 14px;
+  font-weight: 500;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all .15s;
+}
+.mode-tab.active {
+  background: var(--purple-600);
+  color: white;
+}
+.mode-tab:hover:not(.active) { background: var(--gray-100); }
+
+.dropzone {
+  border: 2px dashed var(--border);
+  border-radius: var(--radius-lg);
+  padding: 40px 24px;
+  text-align: center;
+  cursor: pointer;
+  transition: all .2s;
+  background: var(--white);
+  min-height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.dropzone:hover, .dropzone.active { border-color: var(--purple-600); background: var(--purple-50); }
+.dropzone.has-file { border-style: solid; border-color: var(--teal-600); background: var(--teal-50); }
+
+.drop-icon { margin-bottom: 14px; }
+.drop-text { font-size: 15px; font-weight: 600; color: var(--text-primary); margin-bottom: 4px; }
+.drop-sub { font-size: 13px; color: var(--text-muted); margin-bottom: 12px; }
+.drop-types { font-size: 12px; color: var(--text-muted); background: var(--gray-100); display: inline-block; padding: 4px 12px; border-radius: 20px; }
+
+.file-selected {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  text-align: left;
+}
+.file-name { font-size: 15px; font-weight: 600; color: var(--text-primary); }
+.file-size { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+.file-remove {
+  margin-left: auto;
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--white);
+  font-size: 12px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  transition: background .15s;
+}
+.file-remove:hover { background: var(--gray-100); }
+
+.tip-box {
+  background: var(--purple-50);
+  border: 1px solid var(--purple-200);
+  border-radius: var(--radius-md);
+  padding: 14px 18px;
+  font-size: 13px;
+  color: var(--purple-800);
+  line-height: 1.65;
+}
