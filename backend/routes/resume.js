@@ -4,10 +4,10 @@ const path = require('path');
 const fs = require('fs');
 const pdfParse = require('pdf-parse');
 const mammoth = require('mammoth');
-const Anthropic = require('@anthropic-ai/sdk');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 const router = express.Router();
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, path.join(__dirname, '../uploads')),
@@ -28,7 +28,7 @@ const upload = multer({
   }
 });
 
-async function extractText(filePath, mimetype) {
+async function extractText(filePath) {
   const ext = path.extname(filePath).toLowerCase();
   if (ext === '.pdf') {
     const buffer = fs.readFileSync(filePath);
@@ -45,84 +45,31 @@ async function extractText(filePath, mimetype) {
   throw new Error('Unsupported file type');
 }
 
-const PARSE_SYSTEM_PROMPT = `You are an expert career assistant for students. Parse the given resume text and return ONLY a valid JSON object — no markdown fences, no extra text.
+const PARSE_PROMPT = `You are an expert career assistant for students. Parse the given resume text and return ONLY a valid JSON object with no markdown fences, no extra text, no explanation.
 
-JSON schema:
-{
-  "name": "string",
-  "tagline": "string (1 sentence professional summary)",
-  "email": "string or empty string",
-  "phone": "string or empty string",
-  "linkedin": "string or empty string",
-  "github": "string or empty string",
-  "website": "string or empty string",
-  "about": "string (2-3 engaging sentences in first person using strong action verbs)",
-  "experience": [
-    {
-      "role": "string",
-      "company": "string",
-      "location": "string or empty string",
-      "dates": "string",
-      "bullets": ["enriched bullet strings with action verbs and metrics"]
-    }
-  ],
-  "projects": [
-    {
-      "name": "string",
-      "tech": "string (comma-separated technologies)",
-      "link": "string or empty string",
-      "bullets": ["enriched bullet strings"]
-    }
-  ],
-  "education": [
-    {
-      "degree": "string",
-      "institution": "string",
-      "dates": "string",
-      "gpa": "string or empty string",
-      "courses": []
-    }
-  ],
-  "skills": {
-    "languages": [],
-    "frameworks": [],
-    "tools": [],
-    "other": []
-  },
-  "achievements": ["string"],
-  "certifications": ["string"],
-  "languages": ["string"]
+Return this exact JSON structure:
+{"name":"","tagline":"","email":"","phone":"","linkedin":"","github":"","website":"","about":"","experience":[{"role":"","company":"","location":"","dates":"","bullets":[]}],"projects":[{"name":"","tech":"","link":"","bullets":[]}],"education":[{"degree":"","institution":"","dates":"","gpa":"","courses":[]}],"skills":{"languages":[],"frameworks":[],"tools":[],"other":[]},"achievements":[],"certifications":[],"languages":[]}
+
+Rules for bullets: Start with action verb, add metrics, keep under 25 words each.
+Return ONLY the JSON. No markdown. No backticks. No explanation.`;
+
+async function callGemini(promptText) {
+  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+  const result = await model.generateContent(promptText);
+  const text = result.response.text();
+  return text.replace(/```json|```/g, '').trim();
 }
-
-For EVERY experience and project bullet:
-- Start with a strong action verb (Led, Built, Engineered, Designed, Reduced, Increased, Launched, Optimized...)
-- Add metrics where inferable (%, numbers, scale, impact)
-- Use achievement-based phrasing (not task-based)
-- Keep each bullet under 25 words
-
-If a field is missing from the resume, use an empty string or empty array. Never invent data that is not present.`;
 
 router.post('/upload', upload.single('resume'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
-
   const filePath = req.file.path;
   try {
-    const rawText = await extractText(filePath, req.file.mimetype);
+    const rawText = await extractText(filePath);
     if (!rawText || rawText.trim().length < 50) {
-      return res.status(400).json({ error: 'Could not extract enough text from the file. Please try a different format.' });
+      return res.status(400).json({ error: 'Could not extract enough text from the file.' });
     }
-
-    const message = await client.messages.create({
-      model: 'claude-opus-4-5',
-      max_tokens: 2000,
-      system: PARSE_SYSTEM_PROMPT,
-      messages: [{ role: 'user', content: `Parse this resume:\n\n${rawText}` }]
-    });
-
-    const raw = message.content[0].text;
-    const clean = raw.replace(/```json|```/g, '').trim();
-    const parsed = JSON.parse(clean);
-
+    const raw = await callGemini(`${PARSE_PROMPT}\n\nParse this resume:\n\n${rawText}`);
+    const parsed = JSON.parse(raw);
     fs.unlink(filePath, () => {});
     res.json({ success: true, data: parsed });
   } catch (err) {
@@ -138,15 +85,8 @@ router.post('/parse-text', async (req, res) => {
     return res.status(400).json({ error: 'Please provide resume text (minimum 30 characters)' });
   }
   try {
-    const message = await client.messages.create({
-      model: 'claude-opus-4-5',
-      max_tokens: 2000,
-      system: PARSE_SYSTEM_PROMPT,
-      messages: [{ role: 'user', content: `Parse this resume:\n\n${text}` }]
-    });
-    const raw = message.content[0].text;
-    const clean = raw.replace(/```json|```/g, '').trim();
-    const parsed = JSON.parse(clean);
+    const raw = await callGemini(`${PARSE_PROMPT}\n\nParse this resume:\n\n${text}`);
+    const parsed = JSON.parse(raw);
     res.json({ success: true, data: parsed });
   } catch (err) {
     console.error('Parse error:', err);
