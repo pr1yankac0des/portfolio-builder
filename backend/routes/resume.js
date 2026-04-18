@@ -54,7 +54,7 @@ Rules for bullets: Start with action verb, add metrics, keep under 25 words each
 Return ONLY the JSON. No markdown. No backticks. No explanation.`;
 
 async function callGemini(promptText) {
-  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
   const result = await model.generateContent(promptText);
   const text = result.response.text();
   return text.replace(/```json|```/g, '').trim();

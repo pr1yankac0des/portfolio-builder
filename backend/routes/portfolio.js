@@ -8,7 +8,7 @@ router.post('/feedback', async (req, res) => {
   if (!portfolioData) return res.status(400).json({ error: 'Portfolio data required' });
 
   try {
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
     const prompt = `You are a career coach reviewing a student portfolio. Return ONLY a JSON object with no markdown, no backticks, no explanation:
 {"scores":{"readability":85,"impact":78,"completeness":90,"actionVerbs":82,"overall":84},"strengths":["strength 1","strength 2"],"suggestions":["improvement 1","improvement 2","improvement 3","improvement 4"]}
 
