@@ -59,7 +59,7 @@ async function callAI(promptText) {
       'Authorization': `Bearer ${process.env.GROQ_API_KEY}`
     },
     body: JSON.stringify({
-      model: 'llama3-8b-8192',
+      model: 'llama-3.3-70b-versatile',
       messages: [{ role: 'user', content: promptText }],
       temperature: 0.3,
       max_tokens: 2000
