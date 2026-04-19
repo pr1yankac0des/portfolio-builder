@@ -51,26 +51,24 @@ Return this exact JSON structure:
 Rules for bullets: Start with action verb, add metrics, keep under 25 words each.
 Return ONLY the JSON. No markdown. No backticks. No explanation.`;
 
-async function callGemini(promptText) {
-  const apiKey = process.env.GEMINI_API_KEY;
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${apiKey}`;
-  
-  const response = await fetch(url, {
+async function callAI(promptText) {
+  const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${process.env.GROQ_API_KEY}`
+    },
     body: JSON.stringify({
-      contents: [{ parts: [{ text: promptText }] }]
+      model: 'llama3-8b-8192',
+      messages: [{ role: 'user', content: promptText }],
+      temperature: 0.3,
+      max_tokens: 2000
     })
   });
 
   const data = await response.json();
-  
-  if (!response.ok) {
-    throw new Error(data.error?.message || 'Gemini API error');
-  }
-
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-  return text.replace(/```json|```/g, '').trim();
+  if (!response.ok) throw new Error(data.error?.message || 'AI API error');
+  return data.choices[0].message.content.replace(/```json|```/g, '').trim();
 }
 
 router.post('/upload', upload.single('resume'), async (req, res) => {
@@ -81,7 +79,7 @@ router.post('/upload', upload.single('resume'), async (req, res) => {
     if (!rawText || rawText.trim().length < 50) {
       return res.status(400).json({ error: 'Could not extract enough text from the file.' });
     }
-    const raw = await callGemini(`${PARSE_PROMPT}\n\nParse this resume:\n\n${rawText}`);
+    const raw = await callAI(`${PARSE_PROMPT}\n\nParse this resume:\n\n${rawText}`);
     const parsed = JSON.parse(raw);
     fs.unlink(filePath, () => {});
     res.json({ success: true, data: parsed });
@@ -98,7 +96,7 @@ router.post('/parse-text', async (req, res) => {
     return res.status(400).json({ error: 'Please provide resume text (minimum 30 characters)' });
   }
   try {
-    const raw = await callGemini(`${PARSE_PROMPT}\n\nParse this resume:\n\n${text}`);
+    const raw = await callAI(`${PARSE_PROMPT}\n\nParse this resume:\n\n${text}`);
     const parsed = JSON.parse(raw);
     res.json({ success: true, data: parsed });
   } catch (err) {

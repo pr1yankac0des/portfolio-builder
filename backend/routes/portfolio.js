@@ -1,26 +1,24 @@
 const express = require('express');
 const router = express.Router();
 
-async function callGemini(promptText) {
-  const apiKey = process.env.GEMINI_API_KEY;
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${apiKey}`;
-  
-  const response = await fetch(url, {
+async function callAI(promptText) {
+  const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${process.env.GROQ_API_KEY}`
+    },
     body: JSON.stringify({
-      contents: [{ parts: [{ text: promptText }] }]
+      model: 'llama3-8b-8192',
+      messages: [{ role: 'user', content: promptText }],
+      temperature: 0.3,
+      max_tokens: 800
     })
   });
 
   const data = await response.json();
-  
-  if (!response.ok) {
-    throw new Error(data.error?.message || 'Gemini API error');
-  }
-
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-  return text.replace(/```json|```/g, '').trim();
+  if (!response.ok) throw new Error(data.error?.message || 'AI API error');
+  return data.choices[0].message.content.replace(/```json|```/g, '').trim();
 }
 
 router.post('/feedback', async (req, res) => {
@@ -28,18 +26,19 @@ router.post('/feedback', async (req, res) => {
   if (!portfolioData) return res.status(400).json({ error: 'Portfolio data required' });
 
   try {
-    const prompt = `You are a career coach reviewing a student portfolio. Return ONLY a JSON object with no markdown, no backticks, no explanation:
+    const prompt = `You are a career coach reviewing a student portfolio. Return ONLY a JSON object with no markdown, no backticks, no explanation.
+
+Return exactly this structure:
 {"scores":{"readability":85,"impact":78,"completeness":90,"actionVerbs":82,"overall":84},"strengths":["strength 1","strength 2"],"suggestions":["improvement 1","improvement 2","improvement 3","improvement 4"]}
 
 Base scores (0-100) on bullet quality, action verb usage, metrics presence, section completeness.
 Suggestions must each be under 15 words and actionable.
 
-Portfolio data:
-${JSON.stringify(portfolioData)}
+Portfolio data: ${JSON.stringify(portfolioData)}
 
-Return ONLY the JSON object.`;
+Return ONLY the JSON object. No markdown. No backticks.`;
 
-    const raw = await callGemini(prompt);
+    const raw = await callAI(prompt);
     const data = JSON.parse(raw);
     res.json({ success: true, data });
   } catch (err) {
